@@ -1,10 +1,14 @@
 (ns compojure-app.core
-   (:require
+  (:require
    [ring.adapter.jetty :as jetty]
    [ring.util.response :as response]
    [ring.middleware.reload :refer [wrap-reload]]
+   [ring.middleware.resource :refer [wrap-resource]]
+   [ring.middleware.content-type :refer [wrap-content-type]]
+   [ring.middleware.not-modified :refer [wrap-not-modified]]
    [compojure.core :refer :all]
-   [compojure.route :as route]))
+   [compojure.route :as route]
+   [hiccup.core :refer :all]))
 
 (defn home []
   (-> "<h1>Hello World</h1>"
@@ -30,7 +34,11 @@
      (jetty/run-jetty
       ;; the #'app ensures that app is
       ;; reloaded when routes change
-      (wrap-reload #'app)
+      (-> #'app
+          wrap-reload
+          (wrap-resource "public")
+          wrap-content-type
+          wrap-not-modified)
       {:port 3000
        :join? false}))))
 
