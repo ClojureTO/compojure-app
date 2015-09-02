@@ -1,0 +1,12 @@
+<html>
+    <body>
+        <ul>
+
+        total people: {{people|count}}
+        {% for person in people %}
+            <li>Hello {{person.name}}</li>
+        {% endfor %}
+        </ul>
+    </body>
+</html>
+
