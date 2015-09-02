@@ -8,18 +8,42 @@
    [ring.middleware.not-modified :refer [wrap-not-modified]]
    [compojure.core :refer :all]
    [compojure.route :as route]
-   [hiccup.core :refer :all]))
+   [hiccup.core :refer :all]
+   [hiccup.page :refer :all]
+   [selmer.parser :refer :all]
+   [environ.core :refer [env]]
+   [selmer.middleware :refer [wrap-error-page]]))
 
+;;handlers
 (defn home []
-  (-> "<h1>Hello World</h1>"
+  (-> (html5
+       [:head
+        (include-css "/css/site.css")]
+       [:body
+        [:h1 "Hello World"]
+        [:p "this is a test"]])
       (response/response)
       (response/content-type "text/html")))
 
+(defn html-page []
+  (render-file "templates/about.html"
+               {:people
+                [{:name "Bob"}
+                 {:name "Alice"}]}))
+
+;;routes
 (defroutes app
   (GET "/" [] (home))
-  (GET "/about" [] "hello")
+  (GET "/about" [] (html-page))
   (route/not-found "<h1>Page not found</h1>"))
 
+;;middleware
+(defn wrap-dev [handler]
+  (if (env :dev)
+    (-> handler wrap-reload wrap-error-page)
+    handler))
+
+;;server
 (defonce server (atom nil))
 
 (defn stop-server []
@@ -29,13 +53,15 @@
 
 (defn start-server []
   (when-not @server
+    (when (env :dev)
+      (selmer.parser/cache-off!))
     (reset!
      server
      (jetty/run-jetty
       ;; the #'app ensures that app is
       ;; reloaded when routes change
       (-> #'app
-          wrap-reload
+          wrap-dev
           (wrap-resource "public")
           wrap-content-type
           wrap-not-modified)
